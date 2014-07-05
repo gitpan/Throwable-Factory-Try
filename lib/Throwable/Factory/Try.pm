@@ -19,11 +19,11 @@ Throwable::Factory::Try - exception handling for Throwable::Factory
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 =head1 SYNOPSIS
@@ -101,7 +101,7 @@ C<Regexp> - matches Throwable::Factory objects whose TYPE matches the pattern
         ConnectionClosedException->throw('Damn')
     }
     catch [
-        qr/^Connection/' => sub { print 'Here it is' }
+        qr/^Connection/ => sub { print 'Here it is' }
     ];
 
 =item *

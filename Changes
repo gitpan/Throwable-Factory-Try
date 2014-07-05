@@ -1,5 +1,8 @@
 Revision history for Throwable-Factory-Try
 
-0.01    Date/time
+0.02    07/05/14
+        Pod fixes and adding tests
+
+0.01    07/05/14
         First version, released on an unsuspecting world.
 
