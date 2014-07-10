@@ -10,7 +10,7 @@ use Throwable::Factory
 ;
 use Throwable::Factory::Try;
 
-plan tests => 3;
+plan tests => 4;
 
 my $ok;
 
@@ -37,7 +37,21 @@ finally {
     $ok = 1
 };
 
-ok($ok, "Regexp catch");
+ok($ok, "TYPE Regexp catch");
+
+######  TYPE list test
+$ok = 0;
+try {
+    FooBarException->throw('test')
+}
+catch [
+    ['FooException', 'FooBarException'] => sub { $ok = 1 },
+],
+finally {
+    $ok = 1
+};
+
+ok($ok, "TYPE list catch");
 
 ###### taxonomy test
 $ok = 0;

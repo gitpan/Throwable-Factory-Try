@@ -1,5 +1,8 @@
 Revision history for Throwable-Factory-Try
 
+0.03    07/10/14
+        Adding array cases
+        
 0.02    07/05/14
         Pod fixes and adding tests
 

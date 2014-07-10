@@ -19,11 +19,11 @@ Throwable::Factory::Try - exception handling for Throwable::Factory
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 
 =head1 SYNOPSIS
@@ -42,9 +42,12 @@ The goal is to provide a simple but powerful exception framework.
     }
     catch [
         'LWP::UserAgent' => sub { print 'Why are you throwing that at me' },
+        ['LWP::UserAgent', 'HTTP::Tiny'] => sub { print 'Why are you throwing those at me' },
         'FooBarException' => sub { print shift },
         qr/^Foo/ => sub { FooException->throw },
+        ['FooBarException','FooException'] => sub { print "One of these two" },
         '-notimplemented' => sub { print 'One of these' },
+        [':str', qr/^Foo/] => sub { print 'String starting with Foo: ' . shift },
         ':str' => sub { print 'Just a string: ' . shift },
         '*' => sub { print 'default case' },
     ],
@@ -75,6 +78,17 @@ C<< '<class>' >> - matches objects which L<C<DOES>|UNIVERSAL/obj-DOES-ROLE-> or 
 
 =item *
 
+C<< ['<class>'] >> - matches objects whose classname is in the array
+
+    try {
+        My::Exception::Class->throw('my own exception')
+    }
+    catch [
+        ['My::Exception::Class', 'My::Exception::SecondClass'] => sub { print 'Here it is' }
+    ];
+
+=item *
+
 C<< '<TYPE>' >> - matches Throwable::Factory objects based on their TYPE
 
     use Throwable::Factory
@@ -86,6 +100,21 @@ C<< '<TYPE>' >> - matches Throwable::Factory objects based on their TYPE
     }
     catch [
         'FooBarException' => sub { print 'Here it is' }
+    ];
+
+=item *
+
+C<< ['<TYPE>'] >> - same as above, but with multiple choice.
+
+    use Throwable::Factory
+        FooBarException => undef,
+    ;
+    
+    try {
+        FooBarException->throw('I failed')
+    }
+    catch [
+        ['FooBarException', 'FooException'] => sub { print 'Here it is' }
     ];
     
 =item *
@@ -121,13 +150,22 @@ C<< '<TAXONOMY>' >> - matches Throwable::Factory objects based of their L<C<taxo
 
 =item *
 
-C<':str'> - matches strings
+C<':str'> - matches all strings
 
     try {
         die 'oops'
     }
     catch [
         ':str' => sub { print 'Here it is: ' . shift }
+    ];
+
+C<< [':str', <Regexp>] >> - matches strings with a Regexp
+
+    try {
+        die 'oops'
+    }
+    catch [
+        [':str', qr/^oops/ ] => sub { print 'Here it is: ' . shift }
     ];
 
 =item *
@@ -169,6 +207,7 @@ sub _class_case
 
         my $blessed = blessed $x;
         my $ref = ref $x;
+        my $scope = 'obj';
 
         my @table = @prototable;
         while (my ($key, $value) = splice @table, 0, 2)
@@ -179,17 +218,38 @@ sub _class_case
                 return $value
                     unless defined $x
             }
+            
+            # key is a wildcard
+            return $value
+                if $key eq '*';
+            
+            # prepare array cases
+            if(ref $key eq 'ARRAY' && ~~@$key)
+            {
+                # regexp to match against string
+                if(~~@$key >= 2 && $key->[0] eq ':str' && ref $key->[1] eq 'Regexp')
+                {
+                    $scope = 'str';
+                    $key = $key->[1];
+                }
+                # list of class/types
+                elsif(! grep {ref $_} @$key )
+                {
+                    my $re = join('|', map { quotemeta($_) } @$key);
+                    $key = qr/^($re)$/;
+                    $scope = 'obj';
+                }
+            }
 
             # key is a regexp and value's ref matches key
             if(ref $key eq 'Regexp')
             {
                 return $value
-                    if $ref =~ $key
-            }
+                    if $scope eq 'obj' && $ref && $ref =~ $key;
 
-            # key is a wildcard
-            return $value
-                if $key eq '*';
+                return $value
+                    if $scope eq 'str' && !$ref && $x =~ $key;
+            }
 
             # value is a string
             if($key eq ':str')
@@ -230,7 +290,7 @@ sub _class_case
                 if(ref $key eq 'Regexp')
                 {
                     return $value
-                        if $x->TYPE =~ $key;
+                        if $scope ne 'str' && $x->TYPE =~ $key;
                 }
 
                 return $value

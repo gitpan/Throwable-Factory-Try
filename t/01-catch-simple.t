@@ -7,7 +7,7 @@ use Test::More;
 use lib 'lib';
 use Throwable::Factory::Try;
 
-plan tests => 5;
+plan tests => 8;
 
 my $ok;
 
@@ -47,6 +47,17 @@ catch [
 
 ok($ok, "String catch");
 
+###### string regexp test
+$ok = 0;
+try {
+    die 'test regexp'
+}
+catch [
+    [':str', qr/^test/] => sub { $ok = 1 },
+];
+
+ok($ok, "String regexp catch");
+
 ###### class test
 $ok = 0;
 try {
@@ -58,6 +69,31 @@ catch [
 ];
 
 ok($ok, "Class catch");
+
+###### class regexp test
+$ok = 0;
+try {
+    my $obj = bless {}, 'My::Exception::Class';
+    die $obj
+}
+catch [
+    qr/^My::.+::Stuff$/ => sub { $ok = 0 },
+    qr/^My::.+::Class$/ => sub { $ok = 1 },
+];
+
+ok($ok, "Class regexp catch");
+
+###### class list test
+$ok = 0;
+try {
+    my $obj = bless {}, 'My::Exception::Class';
+    die $obj
+}
+catch [
+    ['My::Awesome::Class', 'My::Exception::Class'] => sub { $ok = 1 },
+];
+
+ok($ok, "Class list catch");
 
 ###### role test
 $ok = 0;
@@ -81,3 +117,4 @@ $ok = 0;
 }
 
 ok($ok, "Role catch");
+
